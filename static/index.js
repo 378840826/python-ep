@@ -208,7 +208,15 @@ const bindTest = () => {
     let btn = document.querySelector('.test')
     btn.addEventListener('click', (event) => {
         console.log('click test');
-        addToCart({title:'标题'})
+        var testData = {
+            atid: 253962,
+            deadline: "2019-5-13 16:02:00",
+            frequency: 1,
+            gid: 190850,
+            speedinessTime: 3,
+            title: "美国原装进口 One Fur All 宠物香薰蜡烛 蔓越莓香型 8.5oz",
+        }
+        addToCart(testData)
     })
 }
 

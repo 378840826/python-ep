@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# 跑通了流程，待解决异步问题
 from flask import Flask, render_template, request
 from bs4 import BeautifulSoup
 import requests
@@ -36,7 +37,10 @@ def goodsInfo():
 @app.route('/addToCart', methods=['POST'])
 def add():
     form = request.form
-    addToCart(form)
+    # addToCart(form)
+    global goodsInfo
+    goodsInfo = form
+    rushToPurchase()
     return '收到加购物车请求'
 
 # 获取下一批抢购的时间
@@ -112,8 +116,17 @@ def getGoodsInfo(timeStr):
         goodsArr.append(goods)
     return json.dumps(goodsArr)
 
+# 抢购
+def rushToPurchase():
+    # start action every 0.6s
+    inter = setInterval(0.01, addToCart)
+    # will stop interval in 5s
+    t = threading.Timer(5, inter.cancel)
+    t.start()
+
+
 # 加购物车
-def addToCart(goodsInfo):
+def addToCart():
     loopTime = int(1000 / float(goodsInfo['frequency']))
     url = 'https://www.epet.com/share/ajax.html'
     qs = {
@@ -129,27 +142,30 @@ def addToCart(goodsInfo):
         'succeed_box': 1,
         'hash': random.random(),
     }
-    data = {
-        'qs': qs,
-        'json': True,
-    }
-    headers = {
-        'accept': '*/*',
-        'accept-encoding': 'gzip, deflate, br',
-        'accept-language':'zh-CN,zh;q=0.8',
-        'connection':'keep-alive',
-        'cache-control':'no-cache',
-        'content-length':'12',
-        'content-type':'application/x-www-form-urlencoded; charset=UTF-8',
-        'origin': 'https://www.epet.com',
-        'referer': 'https://www.epet.com/',
-        'user-agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-        'x-requested-With':'XMLHttpRequest',
-        'cookie': "X15t_gott_auth=eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1NTQ4Nzk5MjgsInVzZXIiOnsidWlkIjo0NDAwODgzLCJhY0lkIjoiMzQ2OTQ0NDY1MjgzMzM4MjQiLCJuYW1lIjoi5Li75Lq6X0lPaTc3RjdKV24ifSwiaWF0IjoxNTU0ODc2MzI4fQ.MDPIqUHRNw-tShNVHkcP06aRTRFr0k6TFACubrbWHMI;",
-    }
-    req = requests.get(url, headers = headers, data = data)
-    print('text', req.content)
-    return '执行addToCart函数'
+    cookies = dict(X15t_gott_auth="eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1NTQ4Nzk5MjgsInVzZXIiOnsidWlkIjo0NDAwODgzLCJhY0lkIjoiMzQ2OTQ0NDY1MjgzMzM4MjQiLCJuYW1lIjoi5Li75Lq6X0lPaTc3RjdKV24ifSwiaWF0IjoxNTU0ODc2MzI4fQ.MDPIqUHRNw-tShNVHkcP06aRTRFr0k6TFACubrbWHMI")
+    req = requests.get(url, params = qs, cookies = cookies)
+    # print('text >>>>> ', req.status_code, req.text)
+    print('抢购+1')
+
+# 测试 1 s 能循环多少次
+class setInterval:
+    def __init__(self, interval, action):
+        self.interval=interval
+        self.action = action
+        self.stopEvent = threading.Event()
+        thread=threading.Thread(target=self.__setInterval)
+        thread.start()
+
+    def __setInterval(self):
+        nextTime = time.time() + self.interval
+        while not self.stopEvent.wait(nextTime - time.time()):
+            nextTime += self.interval
+            self.action()
+
+    def cancel(self):
+        self.stopEvent.set()
+
+
 
 
 
